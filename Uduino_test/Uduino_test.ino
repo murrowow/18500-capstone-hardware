@@ -1,5 +1,5 @@
 #include "Wire.h" // This library allows you to communicate with I2C devices.
-#include "ESP8266WiFi.h" // Wifi library 
+//#include "ESP8266WiFi.h" // Wifi library 
 #include "Adafruit_Sensor.h"
 #include "Adafruit_BNO055.h"
 #include<Uduino.h>
@@ -35,6 +35,9 @@ void setup() {
   bno.setExtCrystalUse(true);
 }
 
+// Code copied from Uduino package
+
+
 void loop() {
   uduino.update();
   sensors_event_t event; 
@@ -53,10 +56,17 @@ void loop() {
         pos_vector[0] += dist_x; 
         pos_vector[1] += dist_y; 
         pos_vector[2] += dist_z; 
-        uduino.println(pos_vector[0], 4);
-        uduino.println(pos_vector[1], 4);
-        uduino.println(pos_vector[2], 4);
-        delay(100); 
+        
+        String datapoints = String(pos_vector[0]) + "_" + String(pos_vector[1]) + "_" + String(pos_vector[2]);
+        if (uduino.isConnected()){
+
+          
+          uduino.println(datapoints);
+
+        }
+ 
+        delay(10);
+      
      } else { 
        digitalWrite(led, LOW);
        pos_vector[0] = 0; 
@@ -65,3 +75,6 @@ void loop() {
      }
      old_timestamp = timestamp; 
 }
+
+
+
