@@ -12,7 +12,9 @@ int led = 0;     // LED pin
 int button = 16; // push button is connected
 int temp = 0;    // temporary variable for reading the button pin status
 
-double pos_vector[3] = {0, 0, 0}; 
+double pos_vector[3] = {0, 0, 0};
+double old_timestamp = 0; 
+double timestamp = 0;  
 
 // imu data
 void setup() {
@@ -41,7 +43,8 @@ void loop() {
         digitalWrite(led, HIGH);
         bno.getEvent(&event);
 
-        double time_step = event.timestamp * 0.00001;
+        double timestamp = event.timestamp;
+        double time_step = (timestamp - old_timestamp)/1000000L; //convert to s
         double dist_x = event.acceleration.x * time_step * time_step;
         double dist_y = event.acceleration.y * time_step * time_step; 
         double dist_z = event.acceleration.z * time_step * time_step; 
@@ -60,4 +63,5 @@ void loop() {
        pos_vector[1] = 1; 
        pos_vector[2] = 2; 
      }
+     old_timestamp = timestamp; 
 }

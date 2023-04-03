@@ -41,9 +41,9 @@ void loop() {
 
         double timestamp = event.timestamp; 
         double time_step = (timestamp - old_timestamp)/1000000L; //convert to s
-        double dist_x = event.acceleration.x * time_step * time_step;
-        double dist_y = event.acceleration.y * time_step * time_step; 
-        double dist_z = event.acceleration.z * time_step * time_step; 
+        double dist_x = (event.acceleration.x) * time_step * time_step;
+        double dist_y = (event.acceleration.y) * time_step * time_step; 
+        double dist_z = (event.acceleration.z) * time_step * time_step; 
 
         /* Display the floating point data */
         pos_vector[0] += dist_x; 
