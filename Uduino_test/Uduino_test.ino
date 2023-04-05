@@ -35,45 +35,44 @@ void setup() {
   bno.setExtCrystalUse(true);
 }
 
-// Code copied from Uduino package
-
-
 void loop() {
   uduino.update();
   sensors_event_t event; 
   temp = digitalRead(button);
-     if (temp == HIGH) {
-        digitalWrite(led, HIGH);
-        bno.getEvent(&event);
+  if (temp == HIGH) {
+    digitalWrite(led, HIGH);
+    bno.getEvent(&event);
 
-        double timestamp = event.timestamp;
-        double time_step = (timestamp - old_timestamp)/1000000L; //convert to s
-        double dist_x = event.acceleration.x * time_step * time_step;
-        double dist_y = event.acceleration.y * time_step * time_step; 
-        double dist_z = event.acceleration.z * time_step * time_step; 
+    double timestamp = event.timestamp;
+    double time_step = (timestamp - old_timestamp)/1000000L; //convert to s
+    double dist_x = event.acceleration.x * time_step * time_step;
+    double dist_y = event.acceleration.y * time_step * time_step; 
+    double dist_z = event.acceleration.z * time_step * time_step; 
 
-        /* Display the floating point data */
-        pos_vector[0] += dist_x; 
-        pos_vector[1] += dist_y; 
-        pos_vector[2] += dist_z; 
-        
-        String datapoints = String(pos_vector[0]) + "_" + String(pos_vector[1]) + "_" + String(pos_vector[2]);
-        if (uduino.isConnected()){
+    // Display the floating point data
+    pos_vector[0] += dist_x; 
+    pos_vector[1] += dist_y; 
+    pos_vector[2] += dist_z; 
+    
+    // Create string to send data
+    String datapoints = String(pos_vector[0]) + "_" + String(pos_vector[1]) + "_" + String(pos_vector[2]);
 
-          
-          uduino.println(datapoints);
+    // Send the data
+    Serial.println(datapoints); 
+    if (uduino.isConnected()){
+      uduino.println(datapoints);
+    }
+    delay(10);
 
-        }
- 
-        delay(10);
-      
-     } else { 
-       digitalWrite(led, LOW);
-       pos_vector[0] = 0; 
-       pos_vector[1] = 1; 
-       pos_vector[2] = 2; 
-     }
-     old_timestamp = timestamp; 
+  } else { 
+
+    // Off reset state
+    digitalWrite(led, LOW);
+    pos_vector[0] = 0; 
+    pos_vector[1] = 0; 
+    pos_vector[2] = 0; 
+  }
+  old_timestamp = timestamp; 
 }
 
 
