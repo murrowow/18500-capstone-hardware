@@ -1,10 +1,7 @@
 #include "Wire.h" // This library allows you to communicate with I2C devices.
-//#include "ESP8266WiFi.h" // Wifi library 
+#include "ESP8266WiFi.h" // Wifi library 
 #include "Adafruit_Sensor.h"
 #include "Adafruit_BNO055.h"
-#include<Uduino.h>
-
-Uduino uduino("pen"); 
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 
@@ -16,7 +13,6 @@ double pos_vector[3] = {0, 0, 0};
 double old_timestamp = 0; 
 double timestamp = 0;  
 
-// imu data
 void setup() {
   Serial.begin(9600);
   Serial.println("Orientation Sensor Test"); Serial.println("");
@@ -36,44 +32,29 @@ void setup() {
 }
 
 void loop() {
-  uduino.update();
+  //uduino.update();
   sensors_event_t event; 
   temp = digitalRead(button);
-  if (temp == HIGH) {
-    digitalWrite(led, HIGH);
-    bno.getEvent(&event);
+     if (temp == HIGH) {
+        digitalWrite(led, HIGH);
+        bno.getEvent(&event);
 
-    double timestamp = event.timestamp;
-    double time_step = (timestamp - old_timestamp)/1000000L; //convert to s
-    double dist_x = event.acceleration.x * time_step * time_step;
-    double dist_y = event.acceleration.y * time_step * time_step; 
-    double dist_z = event.acceleration.z * time_step * time_step; 
+        double timestamp = event.timestamp;
+        double time_step = (timestamp - old_timestamp)/1000000L; //convert to s
+        double dist_x = event.acceleration.x * time_step * time_step;
+        double dist_y = event.acceleration.y * time_step * time_step; 
+        double dist_z = event.acceleration.z * time_step * time_step; 
 
-    // Display the floating point data
-    pos_vector[0] += dist_x; 
-    pos_vector[1] += dist_y; 
-    pos_vector[2] += dist_z; 
-    
-    // Create string to send data
-    String datapoints = String(pos_vector[0]) + "_" + String(pos_vector[1]) + "_" + String(pos_vector[2]);
-
-    // Send the data
-    Serial.println(datapoints); 
-    if (uduino.isConnected()){
-      uduino.println(datapoints);
-    }
-    delay(10);
-
-  } else { 
-
-    // Off reset state
-    digitalWrite(led, LOW);
-    pos_vector[0] = 0; 
-    pos_vector[1] = 0; 
-    pos_vector[2] = 0; 
-  }
-  old_timestamp = timestamp; 
+        /* Display the floating point data */
+        pos_vector[0] += dist_x; 
+        pos_vector[1] += dist_y; 
+        pos_vector[2] += dist_z; 
+        delay(100); 
+     } else { 
+       digitalWrite(led, LOW);
+       pos_vector[0] = 0; 
+       pos_vector[1] = 0; 
+       pos_vector[2] = 0; 
+     }
+     old_timestamp = timestamp; 
 }
-
-
-
