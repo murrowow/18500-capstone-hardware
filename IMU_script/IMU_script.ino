@@ -50,12 +50,13 @@ void loop() {
         pos_vector[2] += dist_z;       
 
         Serial.print("X: ");
-        Serial.print(dist_x, 2);
+        Serial.print(dist_x, 3);
         Serial.print("\tY: ");
-        Serial.print(dist_y, 2);
+        Serial.print(dist_y, 3);
         Serial.print("\tZ: ");
-        Serial.print(dist_z, 2);
+        Serial.print(dist_z, 3);
         Serial.println("");
+      
         delay(100); 
      } else { 
        digitalWrite(led, LOW);
