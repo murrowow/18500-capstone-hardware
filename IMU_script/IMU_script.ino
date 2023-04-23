@@ -19,16 +19,15 @@ float quant_vector[4] = {0, 0, 0}; //w, x, y, z coordinates
 float pos_vec[3] = {0, 0, 0}; 
 float acc_mag = 0; 
 int calibration = 0; 
-float accel_error[3] = {0};
 
 // Values used to track time
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
-int interval = 100; //ms
+int interval = 1500; //ms
 
+// https://conservancy.umn.edu/bitstream/handle/11299/199815/Real-Time%20Position%20Tracking%20Using%20IMU%20Data.pdf?sequence=1&isAllowed=y
 void setup() {
   Serial.begin(9600);
-  Serial.println("AccX,AccY,AccZ");
   pinMode(led, OUTPUT);   // declare LED as output
   pinMode(button, INPUT); // declare push button as input
   
@@ -40,18 +39,22 @@ void setup() {
     while(1);
   }
 
-  int time = 50; 
-  Serial.println("Calibrating");
-  while (time > 0) {
-    imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
-    accel_error[0] += acc.x();
-    accel_error[1] += acc.y();
-    accel_error[2] += acc.z(); 
-    Serial.print(".");
-    time -= 1; 
+  uint8_t system, gyro, accel, mag = 0;
+  while(system != 3)
+  {
+    bno.getCalibration(&system, &gyro, &accel, &mag);
+    Serial.print("CALIBRATION: Sys=");
+    Serial.print(system, DEC);
+    Serial.print(" Gyro=");
+    Serial.print(gyro, DEC);
+    Serial.print(" Accel=");
+    Serial.print(accel, DEC);
+    Serial.print(" Mag=");
+    Serial.println(mag, DEC);
+    delay(100);
   }
-  Serial.println("");
-  Serial.print("Done"); 
+
+  Serial.println(""); Serial.println("Calibrated");
   
   delay(1000);
   bno.setExtCrystalUse(true);
@@ -99,70 +102,50 @@ void loop() {
   bState = digitalRead(button);
   
   if (prevBState == LOW && bState == HIGH){
-//      Serial.print("Bon\n");
+      Serial.print("Bon\n");
   }else if (prevBState == HIGH && bState == LOW){
-//      Serial.print("Boff\n");
+      Serial.print("Boff\n");
 
   }
 
-  static unsigned long pastTime = millis();
-  static float velocity[3] = { 0 };
-  static float pastAccel[4] = { 0 };
 
   if (bState == HIGH) {
     digitalWrite(led, HIGH);
-    imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
+    imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
     imu::Vector<3> gyro = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-    imu::Vector<3> gravity = bno.getVector(Adafruit_BNO055::VECTOR_GRAVITY); 
     imu::Quaternion quat = bno.getQuat(); 
 
-    unsigned long currentTime = millis();
+
     float acc_vect[4] = {0, acc.x(), acc.y(), acc.z()}; 
     float quat_vect[4] = {quat.w(), quat.x(), quat.y(), quat.z()};
     float res[4] = {0, 0, 0, 0}; 
 
     acc_mag = (sqrt(pow(acc.x(),2) + pow(acc.y(),2) + pow(acc.z(),2)));
     //ignore if acceleration too low
-    if (acc_mag > 0.05) {
+    if (acc_mag > 0) {
       float conj_q[4] = {quat_vect[0], quat_vect[1], quat_vect[2], quat_vect[3]};
       quat_conj(conj_q);
-      quat_rotate(acc_vect, conj_q, res);
+      quat_rotate(acc_vect, conj_q, res); 
 
       //convert into m/s/s
-      res[1] /= 9.81f*1000000.f;
-      res[2] /= 9.81f*1000000.f;
-      res[3] /= 9.81f*1000000.f;
-
-      float dt = (float) (currentTime - pastTime);
-      float dv[3] = {0.5f * (pastAccel[1] + res[1]) * dt, 0.5f * (pastAccel[2] + res[2]) * dt, 0.5f * (pastAccel[3] + res[3]) * dt};
-
-      velocity[0] += dv[0];
-      velocity[1] += dv[1];
-      velocity[2] += dv[2];
+      res[1] *= 9.81/1000000L;
+      res[2] *= 9.81/1000000L;
+      res[3] *= 9.81/1000000L;
 
       //get position by float integrating
-      pos_vec[0] += 0.5f * dv[0] * dt + velocity[0] * dt;
-      pos_vec[1] += 0.5f * dv[1] * dt + velocity[1] * dt;
-      pos_vec[2] += 0.5f * dv[2] * dt + velocity[2] * dt;
-
-      // Update past accel data
-      memcpy(pastAccel, res, 4*sizeof(float));
+      pos_vec[0] += (res[1]) * 100 * 100;
+      pos_vec[1] += (res[2]) * 100 * 100;
+      pos_vec[2] += (res[3]) * 100 * 100;
     }
 
-    pastTime = millis();
     update_time();
     if (hit_time_interval()) {
-//      Serial.print(pos_vec[0], 2);
-//      Serial.print("_");
-//      Serial.print(pos_vec[2],2);
-//      Serial.print("_");
-//      Serial.print(pos_vec[1],2);
-//      Serial.print("\n");
-       Serial.print(pos_vec[0], 2);
-       Serial.print(",");
-       Serial.print(pos_vec[1], 2);
-       Serial.print(",");
-       Serial.println(pos_vec[2], 2);
+      Serial.print(pos_vec[0], 2);
+      Serial.print("_");
+      Serial.print(pos_vec[2],2);
+      Serial.print("_");
+      Serial.print(pos_vec[1],2);
+      Serial.print("\n");
     }
 
   } else { 
