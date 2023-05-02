@@ -2,18 +2,17 @@
 #include "Adafruit_Sensor.h"
 #include "Adafruit_BNO055.h"
 #include <utility/imumaths.h>
+#include <Kalman.h> 
 #include <SoftwareSerial.h>
-
-#define PI 3.1415926535897932384626433832795
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 
 int led = 11;     // LED pin
-int button = 12; // push button is connected
+int button = 2; // push button is connected
 int c_led = 10; //calibration led pin
 int bState = 0;     // temporary variable for reading the button pin status
 int prevBState = 0; // temporary variable for reading the button pin status (the previous status)
-int cal_button = 13; // calibration button is connected
+int cal_button = 4; // calibration button is connected
 int cState = 0;      // temporary variable
 int cal_time = 1;    // length of calibration
 
@@ -29,11 +28,12 @@ unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
 int interval = 0; //ms
 
+//collect the acceleration error
 void cal_pen(int dt) {
-  imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-  acc_error[0] += acc.x() * dt; 
-  acc_error[1] += acc.y() * dt; 
-  acc_error[2] += acc.z() * dt; 
+  imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
+  acc_error[0] += acc.x();
+  acc_error[1] += acc.y(); 
+  acc_error[2] += acc.z(); 
 }
 
 void setup() {
@@ -49,22 +49,6 @@ void setup() {
     Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
     while(1);
   }
-  /*
-  uint8_t system, gyro, accel, mag = 0;
-  while(system != 3)
-  {
-    bno.getCalibration(&system, &gyro, &accel, &mag);
-    Serial.print("CALIBRATION: Sys=");
-    Serial.print(system, DEC);
-    Serial.print(" Gyro=");
-    Serial.print(gyro, DEC);
-    Serial.print(" Accel=");
-    Serial.print(accel, DEC);
-    Serial.print(" Mag=");
-    Serial.println(mag, DEC);
-    delay(100);
-  } */
-
   Serial.println(""); Serial.println("Calibrated");
   
   delay(1000);
@@ -114,12 +98,18 @@ void loop() {
   bState = digitalRead(button);
   cState = digitalRead(cal_button); 
 
+  //bluetooth signals
+  if (cState == LOW && prevBState == LOW && bState == HIGH){
+      Serial.print("Bon\n");
+  }else if (cState == LOW && prevBState == HIGH && bState == LOW){
+      Serial.print("Boff\n");
+  }
+  
+  //trying to calibrate the pen
   if (cState == HIGH) {
     digitalWrite(c_led, HIGH);
-    acc_error[0] = 0; 
-    acc_error[1] = 0; 
-    acc_error[2] = 0; 
     cal_pen(cal_time); 
+    cal_time++; 
   } else { 
     digitalWrite(c_led, LOW);
     acc_error[0] /= cal_time;
@@ -127,19 +117,12 @@ void loop() {
     acc_error[2] /= cal_time;
     cal_time = 1; 
   }
-  
-  if (cState == LOW && prevBState == LOW && bState == HIGH){
-      Serial.print("Bon\n");
-  }else if (cState == LOW && prevBState == HIGH && bState == LOW){
-      Serial.print("Boff\n");
-
-  }
 
   // when drawing button is pressed and not calibrating
   if (bState == HIGH && cState == LOW) {
     digitalWrite(led, HIGH);
     long last_milli = millis();
-    imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+    imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
     imu::Vector<3> gyro = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
     imu::Quaternion quat = bno.getQuat(); 
 
@@ -149,7 +132,7 @@ void loop() {
 
     acc_mag = (sqrt(pow(acc.x(),2) + pow(acc.y(),2) + pow(acc.z(),2)));
     //ignore if acceleration too low
-    if (acc_mag > 0) {
+    if (acc_mag > 1) {
       float conj_q[4] = {quat_vect[0], quat_vect[1], quat_vect[2], quat_vect[3]};
       quat_conj(conj_q);
       quat_rotate(acc_vect, conj_q, res); 
