@@ -1,18 +1,19 @@
 #include "Wire.h" // This library allows you to communicate with I2C devices.
 #include "Adafruit_Sensor.h"
 #include "Adafruit_BNO055.h"
-#include <utility/imumaths.h>
-#include <Kalman.h> 
+#include <utility/imumaths.h> 
 #include <SoftwareSerial.h>
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 
-int led = 11;     // LED pin
+int led = 7;     // draw LED pin
 int button = 2; // push button is connected
-int c_led = 10; //calibration led pin
+int c_led = 6; //calibration led pin
+int cal_button = 4; // calibration button is connected
+
 int bState = 0;     // temporary variable for reading the button pin status
 int prevBState = 0; // temporary variable for reading the button pin status (the previous status)
-int cal_button = 4; // calibration button is connected
+
 int cState = 0;      // temporary variable
 int cal_time = 1;    // length of calibration
 
@@ -47,7 +48,6 @@ void setup() {
   {
     // There was a problem detecting the BNO055 ... check your connections 
     Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while(1);
   }
   Serial.println(""); Serial.println("Calibrated");
   
@@ -130,28 +130,24 @@ void loop() {
     float quat_vect[4] = {quat.w(), quat.x(), quat.y(), quat.z()};
     float res[4] = {0, 0, 0, 0}; 
 
-    acc_mag = (sqrt(pow(acc.x(),2) + pow(acc.y(),2) + pow(acc.z(),2)));
-    //ignore if acceleration too low
-    if (acc_mag > 1) {
-      float conj_q[4] = {quat_vect[0], quat_vect[1], quat_vect[2], quat_vect[3]};
-      quat_conj(conj_q);
-      quat_rotate(acc_vect, conj_q, res); 
+    float conj_q[4] = {quat_vect[0], quat_vect[1], quat_vect[2], quat_vect[3]};
+    quat_conj(conj_q);
+    quat_rotate(acc_vect, conj_q, res); 
 
-      //convert into m/s/s
-      res[1] /= 1000000L;
-      res[2] /= 1000000L;
-      res[3] /= 1000000L;
-      long curr_milli = millis();
-      long dt = (curr_milli - last_milli); 
-      //get position by float integrating
-      vel_vec[0] += res[1] * dt;
-      vel_vec[1] += res[2] * dt;
-      vel_vec[2] += res[3] * dt;
+    //convert into m/s/s
+    res[1] /= 1000000L;
+    res[2] /= 1000000L;
+    res[3] /= 1000000L;
+    long curr_milli = millis();
+    long dt = (curr_milli - last_milli); 
+    //get position by float integrating
+    vel_vec[0] += res[1] * dt;
+    vel_vec[1] += res[2] * dt;
+    vel_vec[2] += res[3] * dt;
 
-      pos_vec[0] += vel_vec[0] * dt;
-      pos_vec[1] += vel_vec[1] * dt;
-      pos_vec[2] += vel_vec[2] * dt;
-    }
+    pos_vec[0] += vel_vec[0] * dt;
+    pos_vec[1] += vel_vec[1] * dt;
+    pos_vec[2] += vel_vec[2] * dt;
 
     update_time();
     if (hit_time_interval()) {
